@@ -47,7 +47,7 @@ import requests
 import feedparser
 import trafilatura
 from bs4 import BeautifulSoup
-import anthropic
+from google import genai
 
 # ----------------------------- configuration --------------------------------
 
@@ -58,7 +58,7 @@ LAST_SEEN_FILE = STATE_DIR / "last_seen.txt"
 ALERT_FILE = STATE_DIR / "last_alert.json"
 HEARTBEAT_FILE = STATE_DIR / "heartbeat.txt"
 
-MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 MAX_TRANSCRIPT_CHARS = 500_000   # hard cap on what we send to the model
 MIN_TRANSCRIPT_CHARS = 2_000     # below this we assume the transcript isn't up yet
 ALERT_THROTTLE_HOURS = 6         # don't repeat the same alert more often than this
@@ -274,14 +274,17 @@ def build_prompt(title, date_str, transcript):
     )
 
 def summarize(title, date_str, transcript):
-    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment
-    resp = client.messages.create(
+    client = genai.Client()  # reads GEMINI_API_KEY from the environment
+    resp = client.models.generate_content(
         model=MODEL,
-        max_tokens=4000,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": build_prompt(title, date_str, transcript)}],
+        contents=build_prompt(title, date_str, transcript),
+        config=genai.types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            max_output_tokens=4000,
+            temperature=0.4,
+        ),
     )
-    return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text").strip()
+    return (resp.text or "").strip()
 
 def summary_to_html(summary, link):
     """Turn the model's plain summary into HTML. The byline (first line) becomes a
