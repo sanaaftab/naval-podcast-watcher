@@ -3,7 +3,7 @@
 Naval podcast watcher.
 
 Polls the nav.al RSS feed, detects new podcast episodes (dedup by <guid>),
-fetches the episode transcript, summarises it with the Anthropic API in a
+fetches the episode transcript, summarises it with the Gemini API in a
 fixed format, and emails the summary. Also emails an alert if the feed or the
 check itself stops working.
 
@@ -16,7 +16,7 @@ committed back to the repo by the GitHub Actions workflow, so it survives
 between runs.
 
 Required environment variables (add these as GitHub Actions *Secrets*):
-  ANTHROPIC_API_KEY   Anthropic API key
+  GEMINI_API_KEY      Google Gemini API key (free tier, from Google AI Studio)
   SMTP_HOST           e.g. smtp.gmail.com
   SMTP_USER           SMTP login (often the same as EMAIL_FROM)
   SMTP_PASS           SMTP password / app password
@@ -24,8 +24,8 @@ Required environment variables (add these as GitHub Actions *Secrets*):
   EMAIL_TO            where alerts + summaries go   <-- your address, kept hidden
 Optional:
   SMTP_PORT           default 465 (SSL). Use 587 for STARTTLS.
-  ANTHROPIC_MODEL     model id (set as an Actions *Variable*); verify the current
-                      id at https://docs.claude.com/en/docs/about-claude/models
+  GEMINI_MODEL        model id (set as an Actions *Variable*); verify the current
+                      id at https://ai.google.dev/gemini-api/docs/models
 
 Manual test (no email, no state changes):
   python watcher.py --test https://nav.al/<episode-slug>
@@ -412,7 +412,7 @@ def run():
     clear_alert()
 
 def main():
-    require_env(["ANTHROPIC_API_KEY", "SMTP_HOST", "SMTP_USER", "SMTP_PASS", "EMAIL_FROM", "EMAIL_TO"])
+    require_env(["GEMINI_API_KEY", "SMTP_HOST", "SMTP_USER", "SMTP_PASS", "EMAIL_FROM", "EMAIL_TO"])
     try:
         run()
     except Exception:
@@ -433,7 +433,7 @@ def main():
 
 def test_mode(url):
     """Summarise a single episode URL and print it. No email, no state changes."""
-    require_env(["ANTHROPIC_API_KEY"])
+    require_env(["GEMINI_API_KEY"])
     r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=HTTP_TIMEOUT)
     r.raise_for_status()
     text = (trafilatura.extract(r.text, include_comments=False, favor_recall=True) or _strip_html(r.text))
