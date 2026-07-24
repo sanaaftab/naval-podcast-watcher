@@ -1,0 +1,5 @@
+feedparser>=6.0
+requests>=2.31
+trafilatura>=1.8
+beautifulsoup4>=4.12
+anthropic>=0.40
